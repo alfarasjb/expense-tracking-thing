@@ -23,7 +23,7 @@ class ExpenseTrackerApp:
         return True
 
     @staticmethod
-    def _validate_float_input(self, value: str):
+    def _validate_float_input(value: str):
         try:
             float(value)
             return True
@@ -72,7 +72,7 @@ class ExpenseTrackerApp:
                         "description": expense_description,
                         "amount": amount
                     }
-                    response = self.server.test_post_request_with_payload(payload=payload)
+                    response = self.server.store_data_to_db(payload=payload)
                     if response.status_code == 200:
                         st.success("Expenses stored to database.")
                     else:
@@ -82,17 +82,20 @@ class ExpenseTrackerApp:
 
     def _on_press_expense_history_button(self):
         if st.button("Show Expense History", use_container_width=True):
-            st.error("Not implemented")
+            self.server.get_historical_data()
 
     def _on_press_monthly_expense_button(self):
         if st.button("Generate Monthly Expense Report", use_container_width=True):
-            monthly_data = self.server.get_monthly_data(dt.now(), dt.now())
+            date_fmt = "%m-%d-%Y"
+            start_date = dt(dt.now().year, dt.now().month, 1).strftime(date_fmt)
+            end_date = dt.now().strftime(date_fmt)
+            monthly_data = self.server.get_monthly_data(start_date, end_date)
 
     def _home_screen(self):
         st.title("Expense Tracker")
         selected_option = self._get_expense_category()
         expense_description = st.text_input("Description")
-        amount = st.text_input("Amount (Php")
+        amount = st.text_input("Amount (Php)")
         self._on_press_store_button(
             selected_option=selected_option,
             expense_description=expense_description,

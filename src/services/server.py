@@ -1,5 +1,6 @@
 import requests
-
+from typing import Dict, Any
+from src.definitions.urls import Urls
 """
 Communicates with node server
 """
@@ -7,16 +8,10 @@ Communicates with node server
 
 class Server:
     def __init__(self):
-        self.host = 'localhost'
-        self.port = 5000
+        self.urls = Urls()
 
-    def test_endpoint_request(self):
-        endpoint = f'http://{self.host}:{self.port}/test'
-        response = requests.get(endpoint)
-        return response
-
-    def test_post_request_with_payload(self, payload):
-        endpoint = f'http://{self.host}:{self.port}/test'
+    def store_data_to_db(self, payload: Dict[str, Any]):
+        endpoint = self.urls.store_data_endpoint()
         response = requests.post(endpoint, json=payload)
         return response
 
@@ -25,4 +20,11 @@ class Server:
             "start_date": start_date,
             "end_date": end_date
         }
+        endpoint = self.urls.monthly_data_endpoint()
+        response = requests.get(endpoint, json=payload)
+        return response
 
+    def get_historical_data(self):
+        endpoint = self.urls.expense_history_endpoint()
+        response = requests.get(endpoint)
+        return response
