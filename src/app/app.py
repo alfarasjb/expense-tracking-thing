@@ -6,6 +6,19 @@ import streamlit as st
 from src.definitions.enums import ExpenseCategory
 from src.services.server import Server
 
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG,  # Set the logging level
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[
+                        logging.FileHandler("app.log"),  # Log to a file
+                        logging.StreamHandler()  # Also log to console
+                    ])
+
+# Create a logger
+logger = logging.getLogger(__name__)
+
 
 def authentication(success_msg: str, fail_msg: str):
     def decorator(func):
@@ -57,21 +70,8 @@ class ExpenseTrackerApp:
         success_msg="User registered successfully",
         fail_msg="Failed to register. Username may already exist")
     def _register(self, username: str, password: str) -> bool:
+        logger.info(f"Registering user with username: {username}, password: {password}")
         return self.server.register_user(username=username, password=password)
-
-    def login_screen(self):
-        st.markdown("Login")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            st.session_state.logged_in = self._login(username=username, password=password)
-
-    def register_screen(self):
-        st.markdown("Register")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Register"):
-            st.session_state.logged_in = self._register(username=username, password=password)
 
     @staticmethod
     def _valid_home_page_inputs(valid_option: bool, valid_fields: bool, valid_float_input: bool):
@@ -145,12 +145,49 @@ class ExpenseTrackerApp:
         options = self._expense_categories
         selected_option = st.selectbox("CATEGORY", options)
         return selected_option
+    
+    def login_screen(self):
+        st.title("Login")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            if st.session_state.screen == 'login':
+                st.session_state.logged_in = self._login(username=username, password=password)
+                if st.session_state.logged_in:
+                    st.rerun()
+                st.error("Failed to login. Username or password may be incorrect.")
+
+        if st.button("Register"):
+            st.session_state.screen = 'register'
+            st.rerun()
+
+    def register_screen(self):
+        st.title("Create an account")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            st.session_state.screen = "login"
+            st.rerun()
+
+        if st.button("Register"):
+            print("register")
+            if st.session_state.screen == 'register':
+                print(f"Registering: {username}, {password}")
+                st.session_state.logged_in = self._register(username=username, password=password)
+                if st.session_state.logged_in:
+                    st.rerun()
+                st.error("Failed to register.")
 
     def main(self):
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
+        if "screen" not in st.session_state:
+            st.session_state.screen = "login"
 
         if not st.session_state.logged_in:
-            self.login_screen()
+            if st.session_state.screen == 'login':
+                self.login_screen()
+            elif st.session_state.screen == 'register':
+                self.register_screen()
         else:
             self._home_screen()

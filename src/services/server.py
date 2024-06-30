@@ -52,6 +52,7 @@ class Server:
     def register_user(self, username: str, password: str):
         payload = dict(username=username, password=password)
         endpoint = self.urls.register_endpoint()
+        print(endpoint)
         response = requests.post(endpoint, json=payload)
         return response
 
@@ -59,5 +60,6 @@ class Server:
     def login_user(self, username: str, password: str):
         payload = dict(username=username, password=password)
         endpoint = self.urls.login_endpoint()
+        print(endpoint)
         response = requests.post(endpoint, json=payload)
         return response
