@@ -1,9 +1,29 @@
 from datetime import datetime as dt
+from functools import wraps
 
 import streamlit as st
 
 from src.definitions.enums import ExpenseCategory
 from src.services.server import Server
+
+
+def authentication(success_msg: str, fail_msg: str):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs) -> bool:
+            try:
+                response = func(*args, **kwargs)
+                success = response.status_code == 200
+                if success:
+                    st.success(success_msg)
+                else:
+                    st.error(fail_msg)
+                return success
+            except Exception:
+                print("An unknown error occurred")
+                return False
+        return wrapper
+    return decorator
 
 
 class ExpenseTrackerApp:
@@ -19,9 +39,6 @@ class ExpenseTrackerApp:
     def _initialize_app():
         st.set_page_config(page_title="Expense Tracker", layout="centered")
 
-    def _validate_credentials(self):
-        return True
-
     @staticmethod
     def _validate_float_input(value: str):
         try:
@@ -30,16 +47,31 @@ class ExpenseTrackerApp:
         except ValueError:
             return False
 
+    @authentication(
+        success_msg="Logged in successfully",
+        fail_msg="Failed to login. Username or password may be incorrect")
+    def _login(self, username: str, password: str) -> bool:
+        return self.server.login_user(username=username, password=password)
+
+    @authentication(
+        success_msg="User registered successfully",
+        fail_msg="Failed to register. Username may already exist")
+    def _register(self, username: str, password: str) -> bool:
+        return self.server.register_user(username=username, password=password)
+
     def login_screen(self):
         st.markdown("Login")
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         if st.button("Login"):
-            if self._validate_credentials():
-                st.session_state.logged_in = True
-                st.rerun()  # Call this to create a new page
-            else:
-                st.error("Username or password maybe incorrect.")
+            st.session_state.logged_in = self._login(username=username, password=password)
+
+    def register_screen(self):
+        st.markdown("Register")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Register"):
+            st.session_state.logged_in = self._register(username=username, password=password)
 
     @staticmethod
     def _valid_home_page_inputs(valid_option: bool, valid_fields: bool, valid_float_input: bool):
@@ -91,6 +123,10 @@ class ExpenseTrackerApp:
             end_date = dt.now().strftime(date_fmt)
             monthly_data = self.server.get_monthly_data(start_date, end_date)
 
+    def _on_press_clear_database_button(self):
+        if st.button("Clear database contents", use_container_width=True):
+            self.server.clear_database_contents()
+
     def _home_screen(self):
         st.title("Expense Tracker")
         selected_option = self._get_expense_category()
@@ -103,6 +139,7 @@ class ExpenseTrackerApp:
         )
         self._on_press_expense_history_button()
         self._on_press_monthly_expense_button()
+        self._on_press_clear_database_button()
 
     def _get_expense_category(self):
         options = self._expense_categories

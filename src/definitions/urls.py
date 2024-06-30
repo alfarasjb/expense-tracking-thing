@@ -15,3 +15,12 @@ class Urls:
 
     def expense_history_endpoint(self) -> str:
         return f'{self.db_url}/history'
+
+    def clear_database_contents_endpoint(self) -> str:
+        return f'{self.db_url}/clear-db'
+
+    def register_endpoint(self) -> str:
+        return f'{self.db_url}/auth-register'
+
+    def login_endpoint(self) -> str:
+        return f'{self.db_url}/auth-login'
