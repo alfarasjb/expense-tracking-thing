@@ -7,3 +7,4 @@ class ExpenseCategory(Enum):
     EDUCATION = "Education"
     UTILITIES = "Utilities"
     MISC = "Miscellaneous"
+    

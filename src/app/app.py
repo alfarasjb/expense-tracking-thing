@@ -1,22 +1,14 @@
+import logging
 from datetime import datetime as dt
 from functools import wraps
 
+import requests.exceptions
 import streamlit as st
 
 from src.definitions.enums import ExpenseCategory
+from src.definitions.messages import Messages
 from src.services.server import Server
 
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG,  # Set the logging level
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    handlers=[
-                        logging.FileHandler("app.log"),  # Log to a file
-                        logging.StreamHandler()  # Also log to console
-                    ])
-
-# Create a logger
 logger = logging.getLogger(__name__)
 
 
@@ -32,8 +24,11 @@ def authentication(success_msg: str, fail_msg: str):
                 else:
                     st.error(fail_msg)
                 return success
+            except requests.exceptions.ConnectionError as e:
+                st.error(str(e))
+                return False
             except Exception:
-                print("An unknown error occurred")
+                logger.error("An unknownd error occurred.")
                 return False
         return wrapper
     return decorator
@@ -53,28 +48,24 @@ class ExpenseTrackerApp:
         st.set_page_config(page_title="Expense Tracker", layout="centered")
 
     @staticmethod
-    def _validate_float_input(value: str):
+    def _validate_float_input(value: str) -> bool:
         try:
             float(value)
             return True
         except ValueError:
             return False
 
-    @authentication(
-        success_msg="Logged in successfully",
-        fail_msg="Failed to login. Username or password may be incorrect")
+    @authentication(success_msg=Messages.login_success_message(), fail_msg=Messages.login_failed_message())
     def _login(self, username: str, password: str) -> bool:
         return self.server.login_user(username=username, password=password)
 
-    @authentication(
-        success_msg="User registered successfully",
-        fail_msg="Failed to register. Username may already exist")
+    @authentication(success_msg=Messages.register_success_message(), fail_msg=Messages.register_failed_message())
     def _register(self, username: str, password: str) -> bool:
         logger.info(f"Registering user with username: {username}, password: {password}")
         return self.server.register_user(username=username, password=password)
 
     @staticmethod
-    def _valid_home_page_inputs(valid_option: bool, valid_fields: bool, valid_float_input: bool):
+    def _valid_home_page_inputs(valid_option: bool, valid_fields: bool, valid_float_input: bool) -> bool:
         if not valid_option:
             st.error("Please select a category")
             return False
@@ -100,12 +91,13 @@ class ExpenseTrackerApp:
             try:
                 if valid_homepage_inputs:
                     payload = {
+                        "username": st.session_state.user,
                         "category": selected_option,
                         "description": expense_description,
                         "amount": amount
                     }
-                    response = self.server.store_data_to_db(payload=payload)
-                    if response.status_code == 200:
+                    code = self.server.store_data_to_db(payload=payload)
+                    if code == 200:
                         st.success("Expenses stored to database.")
                     else:
                         st.error("Something went wrong. Failed to log expenses into database.")
@@ -114,7 +106,10 @@ class ExpenseTrackerApp:
 
     def _on_press_expense_history_button(self):
         if st.button("Show Expense History", use_container_width=True):
-            self.server.get_historical_data()
+            payload = {
+                "username": st.session_state.user
+            }
+            data = self.server.get_historical_data(payload)
 
     def _on_press_monthly_expense_button(self):
         if st.button("Generate Monthly Expense Report", use_container_width=True):
@@ -141,7 +136,7 @@ class ExpenseTrackerApp:
         self._on_press_monthly_expense_button()
         self._on_press_clear_database_button()
 
-    def _get_expense_category(self):
+    def _get_expense_category(self) -> str:
         options = self._expense_categories
         selected_option = st.selectbox("CATEGORY", options)
         return selected_option
@@ -154,6 +149,7 @@ class ExpenseTrackerApp:
             if st.session_state.screen == 'login':
                 st.session_state.logged_in = self._login(username=username, password=password)
                 if st.session_state.logged_in:
+                    st.session_state.user = username
                     st.rerun()
                 st.error("Failed to login. Username or password may be incorrect.")
 
