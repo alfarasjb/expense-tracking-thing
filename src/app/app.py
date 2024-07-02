@@ -166,9 +166,7 @@ class ExpenseTrackerApp:
             st.rerun()
 
         if st.button("Register"):
-            print("register")
             if st.session_state.screen == 'register':
-                print(f"Registering: {username}, {password}")
                 st.session_state.logged_in = self._register(username=username, password=password)
                 if st.session_state.logged_in:
                     st.rerun()
