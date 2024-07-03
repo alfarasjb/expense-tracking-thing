@@ -18,7 +18,7 @@ def authentication(success_msg: str, fail_msg: str):
         def wrapper(*args, **kwargs) -> bool:
             try:
                 response = func(*args, **kwargs)
-                success = response.status_code == 200
+                success = response == 200
                 if success:
                     st.success(success_msg)
                 else:
