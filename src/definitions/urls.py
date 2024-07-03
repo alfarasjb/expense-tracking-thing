@@ -2,8 +2,8 @@
 
 class Urls:
     def __init__(self):
-        self.server_host = 'localhost'
-        self.server_port = 5000
+        self.server_host = 'expense-tracker-server.fly.dev'
+        self.server_port = 3000
         self.base_url = f'http://{self.server_host}:{self.server_port}'
         self.db_url = f'{self.base_url}/api/db'
 
