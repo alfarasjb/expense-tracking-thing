@@ -1,6 +1,7 @@
+import json
 import logging
 from typing import Dict, Any, List
-import json
+
 import requests
 
 from src.definitions.urls import Urls
