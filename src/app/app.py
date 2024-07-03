@@ -27,8 +27,8 @@ def authentication(success_msg: str, fail_msg: str):
             except requests.exceptions.ConnectionError as e:
                 st.error(str(e))
                 return False
-            except Exception:
-                logger.error("An unknownd error occurred.")
+            except Exception as e:
+                logger.error(f"An unknown error occurred: {e}")
                 return False
         return wrapper
     return decorator

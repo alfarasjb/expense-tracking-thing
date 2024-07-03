@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for expense-tracker-app-rough-hill-5431 on 2024-07-03T10:30:36+08:00
+# fly.toml app configuration file generated for expense-tracker-st-app on 2024-07-03T12:28:24+08:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'expense-tracker-app-rough-hill-5431'
+app = 'expense-tracker-st-app'
 primary_region = 'sin'
 
 [build]
