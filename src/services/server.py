@@ -22,8 +22,8 @@ def on_http_error(func):
             err_msg = "Request failed. Connection is not found"
             logger.error(err_msg)
             raise requests.exceptions.ConnectionError(err_msg)
-        except Exception:
-            logger.error("Request failed. An unknown error occurred.")
+        except Exception as e:
+            logger.error(f"Request failed. An unknown error occurred. Exception: {e}")
     return wrapper
 
 
@@ -50,7 +50,7 @@ class Server:
         endpoint = self.urls.expense_history_endpoint()
         response = requests.get(endpoint, json=payload)
         logger.info(f"Getting expense data. Endpoint: {endpoint}. Payload: {payload}")
-        return json.loads(response.content.get('data'))
+        return json.loads(response.content).get('data')
 
     @on_http_error
     def clear_database_contents(self) -> int:
