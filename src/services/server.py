@@ -34,6 +34,7 @@ class Server:
     @on_http_error
     def store_data_to_db(self, payload: Dict[str, Any]) -> int:
         endpoint = self.urls.store_data_endpoint()
+        logger.info(f"Storing expense data. Endpoint: {endpoint}, Payload: {payload}")
         response = requests.post(endpoint, json=payload)
         return response.status_code
 
@@ -48,6 +49,7 @@ class Server:
     def get_historical_data(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         endpoint = self.urls.expense_history_endpoint()
         response = requests.get(endpoint, json=payload)
+        logger.info(f"Getting expense data. Endpoint: {endpoint}. Payload: {payload}")
         return json.loads(response.content.get('data'))
 
     @on_http_error
@@ -60,12 +62,20 @@ class Server:
     def register_user(self, username: str, password: str) -> bool:
         payload = dict(username=username, password=password)
         endpoint = self.urls.register_endpoint()
+        logger.info(f"Requesting to register user. Endpoint: {endpoint}. Payload: {payload}")
         response = requests.post(endpoint, json=payload)
-        return response.status_code == 200
+        success = response.status_code == 200
+        if not success:
+            logger.error(f"Failed to register user: {username}. Status Code: {response.status_code}")
+        return success
 
     @on_http_error
     def login_user(self, username: str, password: str) -> bool:
         payload = dict(username=username, password=password)
         endpoint = self.urls.login_endpoint()
+        logger.info(f"Requesting to authenticate user. Endpoint: {endpoint}. Payload: {payload}")
         response = requests.post(endpoint, json=payload)
-        return response.status_code == 200
+        success = response.status_code == 200
+        if not success:
+            logger.error(f"Failed to login user: {username}. Status Code: {response.status_code}. Endpoint: {endpoint}")
+        return success
