@@ -8,9 +8,12 @@ import streamlit as st
 from src.definitions.enums import ExpenseCategory
 from src.definitions.messages import Messages
 from src.services.server import Server
+from src.utils.utils import response_as_dataframe
 
 logger = logging.getLogger(__name__)
 
+
+# TODO: Dashboard
 
 def authentication(success_msg: str, fail_msg: str):
     def decorator(func):
@@ -110,6 +113,7 @@ class ExpenseTrackerApp:
                 "username": st.session_state.user
             }
             data = self.server.get_historical_data(payload)
+            st.dataframe(response_as_dataframe(data))
 
     def _on_press_monthly_expense_button(self):
         if st.button("Generate Monthly Expense Report", use_container_width=True):
@@ -117,6 +121,34 @@ class ExpenseTrackerApp:
             start_date = dt(dt.now().year, dt.now().month, 1).strftime(date_fmt)
             end_date = dt.now().strftime(date_fmt)
             monthly_data = self.server.get_monthly_data(start_date, end_date)
+            st.dataframe(response_as_dataframe(monthly_data))
+
+    def data_screen(self):
+        # Trigger this screen when calling data from db.
+        # st.dataframe will be shown here
+        pass
+
+    def _chat_box(self):
+        with st.sidebar:
+            messages = st.container(height=500)
+
+            # Initialize Chat History
+            if "messages" not in st.session_state:
+                st.session_state.messages = []
+
+            # Display chat messages from history on app rerun
+            for message in st.session_state.messages:
+                messages.chat_message(message["role"]).write(message["content"])
+
+            if prompt := st.chat_input("Say something"):
+                messages.chat_message("user").write(prompt)
+                user_message = dict(role="user", content=prompt)
+                st.session_state.messages.append(user_message)
+                bot_response = self.server.send_message_to_chatbot(message=prompt)
+                if bot_response:
+                    messages.chat_message("assistant").write(bot_response)
+                    bot_message = dict(role="assistant", content=bot_response)
+                    st.session_state.messages.append(bot_message)
 
     def _on_press_clear_database_button(self):
         if st.button("Clear database contents", use_container_width=True):
@@ -135,6 +167,8 @@ class ExpenseTrackerApp:
         self._on_press_expense_history_button()
         self._on_press_monthly_expense_button()
         self._on_press_clear_database_button()
+
+        self._chat_box()
 
     def _get_expense_category(self) -> str:
         options = self._expense_categories
@@ -173,6 +207,7 @@ class ExpenseTrackerApp:
                 st.error("Failed to register.")
 
     def main(self):
+        print("main")
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
         if "screen" not in st.session_state:

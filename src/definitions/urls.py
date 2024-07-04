@@ -6,6 +6,7 @@ class Urls:
         self.server_port = 3000
         self.base_url = EnvVariables.server_base_url()
         self.db_url = f'{self.base_url}/api/db'
+        self.chatbot_url = f'{self.base_url}/api/chat'
 
     def monthly_data_endpoint(self) -> str:
         return f'{self.db_url}/monthly-data'
@@ -24,4 +25,7 @@ class Urls:
 
     def login_endpoint(self) -> str:
         return f'{self.db_url}/auth-login'
+
+    def chatbot_message_endpoint(self) -> str:
+        return f'{self.chatbot_url}/send-message'
 

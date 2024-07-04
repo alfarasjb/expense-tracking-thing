@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import requests
 
@@ -31,6 +31,10 @@ class Server:
     def __init__(self):
         self.urls = Urls()
 
+    @staticmethod
+    def _get_key_from_json_response(response: requests.Response, key: str):
+        return json.loads(response.content).get(key)
+
     @on_http_error
     def store_data_to_db(self, payload: Dict[str, Any]) -> int:
         endpoint = self.urls.store_data_endpoint()
@@ -43,14 +47,14 @@ class Server:
         payload = dict(start_date=start_date, end_date=end_date)
         endpoint = self.urls.monthly_data_endpoint()
         response = requests.get(endpoint, json=payload)
-        return json.loads(response.content.get('data'))
+        return self._get_key_from_json_response(response, key='data')
 
     @on_http_error
     def get_historical_data(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
         endpoint = self.urls.expense_history_endpoint()
         response = requests.get(endpoint, json=payload)
         logger.info(f"Getting expense data. Endpoint: {endpoint}. Payload: {payload}")
-        return json.loads(response.content).get('data')
+        return self._get_key_from_json_response(response, key='data')
 
     @on_http_error
     def clear_database_contents(self) -> int:
@@ -79,3 +83,13 @@ class Server:
         if not success:
             logger.error(f"Failed to login user: {username}. Status Code: {response.status_code}. Endpoint: {endpoint}")
         return success
+
+    @on_http_error
+    def send_message_to_chatbot(self, message: str) -> Optional[str]:
+        payload = dict(message=message)
+        endpoint = self.urls.chatbot_message_endpoint()
+        logger.info(f"Sending message to chatbot. Endpoint: {endpoint}. Payload: {payload}")
+        response = requests.post(endpoint, json=payload)
+        if response.status_code == 200:
+            message = self._get_key_from_json_response(response, key='message')
+            return message
