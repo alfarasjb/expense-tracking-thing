@@ -1,45 +1,26 @@
 import logging
-from datetime import datetime as dt
-from functools import wraps
+import datetime
+from datetime import datetime as dt, timedelta
 
-import requests.exceptions
+import pandas as pd
 import streamlit as st
-
+from src.app.plots import Plots
 from src.definitions.enums import ExpenseCategory
 from src.definitions.messages import Messages
 from src.services.server import Server
+from src.utils.decorators import authentication
 from src.utils.utils import response_as_dataframe
 
 logger = logging.getLogger(__name__)
 
 
 # TODO: Dashboard
-
-def authentication(success_msg: str, fail_msg: str):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs) -> bool:
-            try:
-                response = func(*args, **kwargs)
-                success = response
-                if success:
-                    st.success(success_msg)
-                else:
-                    st.error(fail_msg)
-                return success
-            except requests.exceptions.ConnectionError as e:
-                st.error(str(e))
-                return False
-            except Exception as e:
-                logger.error(f"An unknown error occurred: {e}")
-                return False
-        return wrapper
-    return decorator
-
+# TODO: Callback: Update dashboard on new entries (Fix this)
 
 class ExpenseTrackerApp:
     def __init__(self):
         self.server = Server()
+        self.plots = Plots()
         self._initialize_app()
 
     @property
@@ -48,7 +29,7 @@ class ExpenseTrackerApp:
 
     @staticmethod
     def _initialize_app():
-        st.set_page_config(page_title="Expense Tracker", layout="centered")
+        st.set_page_config(page_title="Expense Tracker", layout="wide")
 
     @staticmethod
     def _validate_float_input(value: str) -> bool:
@@ -80,7 +61,7 @@ class ExpenseTrackerApp:
             return False
         return True
 
-    def _on_press_store_button(self, selected_option: str, expense_description: str, amount: str):
+    def _on_press_store_button(self, selected_option: str, expense_description: str, amount: str, selected_date: datetime.date):
         # Validation
         valid_option = selected_option != ExpenseCategory.DEFAULT.value
         valid_fields = (expense_description != "") or (amount != "")
@@ -93,11 +74,13 @@ class ExpenseTrackerApp:
                 valid_float_input=valid_float_input)
             try:
                 if valid_homepage_inputs:
+                    date = (datetime.datetime.combine(selected_date, datetime.time.min) + timedelta(days=1)).timestamp() * 1000  # Converts to datetime then gets timestamp
                     payload = {
                         "username": st.session_state.user,
                         "category": selected_option,
                         "description": expense_description,
-                        "amount": amount
+                        "amount": amount,
+                        "date": date
                     }
                     code = self.server.store_data_to_db(payload=payload)
                     if code == 200:
@@ -129,46 +112,77 @@ class ExpenseTrackerApp:
         pass
 
     def _chat_box(self):
-        with st.sidebar:
-            messages = st.container(height=500)
+        messages = st.container(height=300)
 
-            # Initialize Chat History
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
+        # Initialize Chat History
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-            # Display chat messages from history on app rerun
-            for message in st.session_state.messages:
-                messages.chat_message(message["role"]).write(message["content"])
+        # Display chat messages from history on app rerun
+        for message in st.session_state.messages:
+            messages.chat_message(message["role"]).write(message["content"])
 
-            if prompt := st.chat_input("Say something"):
-                messages.chat_message("user").write(prompt)
-                user_message = dict(role="user", content=prompt)
-                st.session_state.messages.append(user_message)
-                bot_response = self.server.send_message_to_chatbot(message=prompt)
-                if bot_response:
-                    messages.chat_message("assistant").write(bot_response)
-                    bot_message = dict(role="assistant", content=bot_response)
-                    st.session_state.messages.append(bot_message)
+        if prompt := st.chat_input("Say something"):
+            messages.chat_message("user").write(prompt)
+            user_message = dict(role="user", content=prompt)
+            st.session_state.messages.append(user_message)
+            bot_response = self.server.send_message_to_chatbot(message=prompt)
+            if bot_response:
+                messages.chat_message("assistant").write(bot_response)
+                bot_message = dict(role="assistant", content=bot_response)
+                st.session_state.messages.append(bot_message)
 
     def _on_press_clear_database_button(self):
         if st.button("Clear database contents", use_container_width=True):
             self.server.clear_database_contents()
 
-    def _home_screen(self):
-        st.title("Expense Tracker")
-        selected_option = self._get_expense_category()
-        expense_description = st.text_input("Description")
-        amount = st.text_input("Amount (Php)")
-        self._on_press_store_button(
-            selected_option=selected_option,
-            expense_description=expense_description,
-            amount=amount
-        )
-        self._on_press_expense_history_button()
-        self._on_press_monthly_expense_button()
-        self._on_press_clear_database_button()
+    def _home_screen(self, on_callback=False):
+        st.title(f"Welcome, {st.session_state.user}!")
+        with st.sidebar:
+            selected_option = self._get_expense_category()
+            expense_description = st.text_input("DESCRIPTION")
+            amount = st.text_input("AMOUNT (Php)")
+            selected_date = st.date_input(
+                "Select a date",
+                value=datetime.date.today(),
+                min_value=datetime.date(2000, 1, 1),
+                max_value=datetime.date.today())
+            self._on_press_store_button(
+                selected_option=selected_option,
+                expense_description=expense_description,
+                amount=amount,
+                selected_date=selected_date
+            )
+            # self._on_press_expense_history_button()
+            # self._on_press_monthly_expense_button()
+            self._on_press_clear_database_button()
 
-        self._chat_box()
+            self._chat_box()
+
+        self._dashboard(on_callback)
+
+    def _dashboard(self, on_callback):
+        # if "monthly_data" not in st.session_state:
+        #     self._get_monthly_data()
+        # if on_callback:
+        #     self._get_monthly_data()
+        self._get_monthly_data()
+
+    def _monthly_data_is_updated(self):
+        # Check if new data is available, then refresh dashboard
+        pass
+
+    def _get_monthly_data(self):
+        date_fmt = "%m-%d-%Y"
+        start_date = dt(dt.now().year, dt.now().month, 1)
+        next_month = 1 if start_date.month == 12 else start_date.month + 1
+        end_date = dt(start_date.year, next_month, 1)
+        monthly_data = self.server.get_monthly_data(start_date.strftime(date_fmt), end_date.strftime(date_fmt))
+        st.session_state.monthly_data = monthly_data
+        df = response_as_dataframe(monthly_data)
+
+        # st.dataframe(df, hide_index=True)
+        self.plots.plot_monthly_expenses_bar_chart(df, start_date=start_date, end_date=end_date)
 
     def _get_expense_category(self) -> str:
         options = self._expense_categories
