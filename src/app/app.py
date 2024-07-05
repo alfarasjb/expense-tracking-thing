@@ -87,6 +87,8 @@ class ExpenseTrackerApp:
                     st.session_state.screen = "home"
                     if code == 200:
                         st.success("Expenses stored to database.")
+                        self._on_refresh_monthly_data()
+                        st.rerun()
                     else:
                         st.error("Something went wrong. Failed to log expenses into database.")
             except:
@@ -194,7 +196,6 @@ class ExpenseTrackerApp:
                 st.session_state.logged_in = self._login(username=username, password=password)
                 if st.session_state.logged_in:
                     st.session_state.user = username
-                    print("login refresh")
                     self._on_refresh_monthly_data()
                     st.rerun()
                 st.error("Failed to login. Username or password may be incorrect.")
