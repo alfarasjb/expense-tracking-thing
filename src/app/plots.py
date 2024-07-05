@@ -41,4 +41,11 @@ class Plots:
         ax.set_title(f'Expenses from {start_date.date()} to {end_date.date()}', fontsize=8)
         plt.xticks(rotation=90, fontsize=6)
         plt.yticks(fontsize=6)
-        st.pyplot(fig)
+        return fig
+
+    def plot_distribution(self, df: pd.DataFrame):
+        pass
+
+    def plot_pie(self):
+        pass
+

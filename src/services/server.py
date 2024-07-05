@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 import requests
 
@@ -19,7 +19,7 @@ class Server:
         self.urls = Urls()
 
     @staticmethod
-    def _get_key_from_json_response(response: requests.Response, key: str):
+    def _get_key_from_json_response(response: requests.Response, key: str) -> Any:
         return json.loads(response.content).get(key)
 
     @on_http_error
@@ -30,12 +30,13 @@ class Server:
         return response.status_code
 
     @on_http_error
-    def get_monthly_data(self, start_date, end_date) -> List[Dict[str, Any]]:
+    def get_monthly_data(self, start_date, end_date) -> Tuple[List[Dict[str, Any]], str]:
+
         payload = dict(start_date=start_date, end_date=end_date)
         endpoint = self.urls.monthly_data_endpoint()
         logger.info(f"Getting expense data from {start_date} to {end_date}. Endpoint: {endpoint}. Payload: {payload}")
         response = requests.get(endpoint, json=payload)
-        return self._get_key_from_json_response(response, key='data')
+        return self._get_key_from_json_response(response, key='data'), self._get_key_from_json_response(response, key='summary')
 
     @on_http_error
     def get_historical_data(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -73,8 +74,8 @@ class Server:
         return success
 
     @on_http_error
-    def send_message_to_chatbot(self, message: str) -> Optional[str]:
-        payload = dict(message=message)
+    def send_message_to_chatbot(self, user: str, message: str) -> Optional[str]:
+        payload = dict(user=user, message=message)
         endpoint = self.urls.chatbot_message_endpoint()
         logger.info(f"Sending message to chatbot. Endpoint: {endpoint}. Payload: {payload}")
         response = requests.post(endpoint, json=payload)

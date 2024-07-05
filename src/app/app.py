@@ -29,7 +29,7 @@ class ExpenseTrackerApp:
 
     @staticmethod
     def _initialize_app():
-        st.set_page_config(page_title="Expense Tracker", layout="wide")
+        st.set_page_config(page_title="Expense Tracker", layout="centered", initial_sidebar_state='collapsed')
 
     @staticmethod
     def _validate_float_input(value: str) -> bool:
@@ -83,6 +83,8 @@ class ExpenseTrackerApp:
                         "date": date
                     }
                     code = self.server.store_data_to_db(payload=payload)
+                    st.session_state.refresh_dashboard = True
+                    st.session_state.screen = "home"
                     if code == 200:
                         st.success("Expenses stored to database.")
                     else:
@@ -98,25 +100,12 @@ class ExpenseTrackerApp:
             data = self.server.get_historical_data(payload)
             st.dataframe(response_as_dataframe(data))
 
-    def _on_press_monthly_expense_button(self):
-        if st.button("Generate Monthly Expense Report", use_container_width=True):
-            date_fmt = "%m-%d-%Y"
-            start_date = dt(dt.now().year, dt.now().month, 1).strftime(date_fmt)
-            end_date = dt.now().strftime(date_fmt)
-            monthly_data = self.server.get_monthly_data(start_date, end_date)
-            st.dataframe(response_as_dataframe(monthly_data))
-
-    def data_screen(self):
-        # Trigger this screen when calling data from db.
-        # st.dataframe will be shown here
-        pass
-
     def _chat_box(self):
-        messages = st.container(height=300)
+        messages = st.container(height=500)
 
         # Initialize Chat History
         if "messages" not in st.session_state:
-            st.session_state.messages = []
+            st.session_state.messages = [dict(role="assistant", content=f"Hello {st.session_state.user}! How can I help you today?")]
 
         # Display chat messages from history on app rerun
         for message in st.session_state.messages:
@@ -126,7 +115,7 @@ class ExpenseTrackerApp:
             messages.chat_message("user").write(prompt)
             user_message = dict(role="user", content=prompt)
             st.session_state.messages.append(user_message)
-            bot_response = self.server.send_message_to_chatbot(message=prompt)
+            bot_response = self.server.send_message_to_chatbot(user=st.session_state.user, message=prompt)
             if bot_response:
                 messages.chat_message("assistant").write(bot_response)
                 bot_message = dict(role="assistant", content=bot_response)
@@ -136,53 +125,60 @@ class ExpenseTrackerApp:
         if st.button("Clear database contents", use_container_width=True):
             self.server.clear_database_contents()
 
+    def add_expenses(self):
+        selected_option = self._get_expense_category()
+        expense_description = st.text_input("DESCRIPTION")
+        amount = st.text_input("AMOUNT (Php)")
+        selected_date = st.date_input(
+            "Select a date",
+            value=datetime.date.today(),
+            min_value=datetime.date(2000, 1, 1),
+            max_value=datetime.date.today())
+        self._on_press_store_button(
+            selected_option=selected_option,
+            expense_description=expense_description,
+            amount=amount,
+            selected_date=selected_date
+        )
+        self._on_press_exit_button()
+
+    def _on_press_exit_button(self):
+        if st.button("Exit", use_container_width=True):
+            # TODO: Update monthly data before rerun
+            self._on_refresh_monthly_data()
+            st.session_state.screen = "home"
+            st.rerun()
+
     def _home_screen(self, on_callback=False):
         st.title(f"Welcome, {st.session_state.user}!")
+        if st.button("Add Expenses"):
+            st.session_state.screen = "expense_form"
+            st.rerun()
         with st.sidebar:
-            selected_option = self._get_expense_category()
-            expense_description = st.text_input("DESCRIPTION")
-            amount = st.text_input("AMOUNT (Php)")
-            selected_date = st.date_input(
-                "Select a date",
-                value=datetime.date.today(),
-                min_value=datetime.date(2000, 1, 1),
-                max_value=datetime.date.today())
-            self._on_press_store_button(
-                selected_option=selected_option,
-                expense_description=expense_description,
-                amount=amount,
-                selected_date=selected_date
-            )
-            # self._on_press_expense_history_button()
-            # self._on_press_monthly_expense_button()
-            self._on_press_clear_database_button()
-
             self._chat_box()
+        self._dashboard()
 
-        self._dashboard(on_callback)
-
-    def _dashboard(self, on_callback):
-        # if "monthly_data" not in st.session_state:
-        #     self._get_monthly_data()
-        # if on_callback:
-        #     self._get_monthly_data()
-        self._get_monthly_data()
-
-    def _monthly_data_is_updated(self):
-        # Check if new data is available, then refresh dashboard
-        pass
+    def _dashboard(self):
+        if "summary" in st.session_state:
+            st.write(st.session_state.summary)
+        if "plot" in st.session_state:
+            st.pyplot(st.session_state.plot)
+        if "monthly_data" in st.session_state:
+            st.dataframe(st.session_state.monthly_data, hide_index=True, use_container_width=True)
+        else:
+            print("Dashboard is up to date")
 
     def _get_monthly_data(self):
         date_fmt = "%m-%d-%Y"
         start_date = dt(dt.now().year, dt.now().month, 1)
         next_month = 1 if start_date.month == 12 else start_date.month + 1
         end_date = dt(start_date.year, next_month, 1)
-        monthly_data = self.server.get_monthly_data(start_date.strftime(date_fmt), end_date.strftime(date_fmt))
+        monthly_data, summary = self.server.get_monthly_data(start_date.strftime(date_fmt), end_date.strftime(date_fmt))
         st.session_state.monthly_data = monthly_data
         df = response_as_dataframe(monthly_data)
+        return df, start_date, end_date, summary
 
         # st.dataframe(df, hide_index=True)
-        self.plots.plot_monthly_expenses_bar_chart(df, start_date=start_date, end_date=end_date)
 
     def _get_expense_category(self) -> str:
         options = self._expense_categories
@@ -198,12 +194,23 @@ class ExpenseTrackerApp:
                 st.session_state.logged_in = self._login(username=username, password=password)
                 if st.session_state.logged_in:
                     st.session_state.user = username
+                    print("login refresh")
+                    self._on_refresh_monthly_data()
                     st.rerun()
                 st.error("Failed to login. Username or password may be incorrect.")
 
-        if st.button("Register"):
-            st.session_state.screen = 'register'
-            st.rerun()
+        # if st.button("Register"):
+        #     st.session_state.screen = 'register'
+        #     st.rerun()
+
+    def _on_refresh_monthly_data(self):
+        st.session_state.refresh_monthly_data = False
+        st.session_state.monthly_data, start_date, end_date, summary = self._get_monthly_data()
+        st.session_state.plot = self.plots.plot_monthly_expenses_bar_chart(st.session_state.monthly_data,
+                                                                           start_date=start_date,
+                                                                           end_date=end_date)
+        if st.session_state.summary == "":
+            st.session_state.summary = summary
 
     def register_screen(self):
         st.title("Create an account")
@@ -220,17 +227,31 @@ class ExpenseTrackerApp:
                     st.rerun()
                 st.error("Failed to register.")
 
-    def main(self):
-        print("main")
+    def _initialize_session_state(self):
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
         if "screen" not in st.session_state:
             st.session_state.screen = "login"
+        if "refresh_dashboard" not in st.session_state:
+            st.session_state.refresh_dashboard = True
+        if "user" not in st.session_state:
+            st.session_state.user = ""
+        if "summary" not in st.session_state:
+            st.session_state.summary = ""
 
+    def main(self):
+        self._initialize_session_state()
+
+        print("SCREEN: ", st.session_state.screen)
         if not st.session_state.logged_in:
             if st.session_state.screen == 'login':
                 self.login_screen()
             elif st.session_state.screen == 'register':
                 self.register_screen()
+        # if st.session_state.screen == "expense_form":
+        #     self.add_expenses()
         else:
-            self._home_screen()
+            if st.session_state.screen == "expense_form":
+                self.add_expenses()
+            else:
+                self._home_screen()
