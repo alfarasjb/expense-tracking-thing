@@ -97,11 +97,12 @@ class Database:
                 pass
 
     def on_refresh_monthly_data(self):
+        # TODO: Add validation if there's no data
         st.session_state.refresh_monthly_data = False
         st.session_state.monthly_data, start_date, end_date, summary = self._get_monthly_data()
-        st.session_state.plot = self.plots.plot_monthly_expenses_bar_chart(st.session_state.monthly_data,
-                                                                           start_date=start_date,
-                                                                           end_date=end_date)
+        if len(st.session_state.monthly_data) > 0:
+            st.session_state.plot = self.plots.plot_monthly_expenses_bar_chart(st.session_state.monthly_data,
+                                                                           start_date=start_date,                                                    end_date=end_date)
         if st.session_state.summary == "":
             st.session_state.summary = summary
 

@@ -48,7 +48,7 @@ class ExpenseTrackerApp:
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
         if "screen" not in st.session_state:
-            st.session_state.screen = c.LOGIN_SCREEN
+            st.session_state.screen = c.ENTRY_SCREEN
         if "refresh_dashboard" not in st.session_state:
             st.session_state.refresh_dashboard = True
         if "user" not in st.session_state:
@@ -59,10 +59,12 @@ class ExpenseTrackerApp:
     def main(self):
         self._initialize_session_state()
         if not st.session_state.logged_in:
-            if st.session_state.screen == c.LOGIN_SCREEN:
+            if st.session_state.screen == c.ENTRY_SCREEN:
+                self.authentication.entry_screen()
+            elif st.session_state.screen == c.LOGIN_SCREEN:
                 self.authentication.login_screen(self.db.on_refresh_monthly_data)
             elif st.session_state.screen == c.REGISTER_SCREEN:
-                self.authentication.register_screen()
+                self.authentication.register_screen(self.db.on_refresh_monthly_data)
         else:
             if st.session_state.screen == c.EXPENSE_SCREEN:
                 self.db.add_expenses_screen()

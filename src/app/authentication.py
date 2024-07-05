@@ -36,17 +36,37 @@ class Authentication:
                     st.rerun()
                 st.error("Failed to login. Username or password may be incorrect.")
 
-    def register_screen(self):
+        st.markdown("Don't have an account? Sign up instead.")
+        if st.button(REGISTER_BUTTON):
+            st.session_state.screen = REGISTER_SCREEN
+            st.rerun()
+
+    def register_screen(self, callback: Callable):
         st.title("Create an account")
+        name = st.text_input("Name")
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
+        if st.button(REGISTER_BUTTON):
+            if st.session_state.screen == REGISTER_SCREEN:
+                st.session_state.logged_in = self._register(username=username, password=password)
+                if st.session_state.logged_in:
+                    callback()
+                    st.rerun()
+                st.error("Failed to register")
+
+        st.markdown("Already have an account? Sign in instead.")
+        if st.button(LOGIN_BUTTON):
+            st.session_state.screen = LOGIN_SCREEN
+            st.rerun()
+
+    @staticmethod
+    def entry_screen():
+        # This contains buttons for selecting to login or sign up.
+        st.title("Welcome! Please log in or sign up to continue.")
         if st.button(LOGIN_BUTTON):
             st.session_state.screen = LOGIN_SCREEN
             st.rerun()
 
         if st.button(REGISTER_BUTTON):
-            if st.session_state.screen == REGISTER_SCREEN:
-                st.session_state.logged_in = self._register(username=username, password=password)
-                if st.session_state.logged_in:
-                    st.rerun()
-                st.error("Failed to register")
+            st.session_state.screen = REGISTER_SCREEN
+            st.rerun()
