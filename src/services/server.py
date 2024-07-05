@@ -82,3 +82,5 @@ class Server:
         if response.status_code == 200:
             message = self._get_key_from_json_response(response, key='message')
             return message
+
+server = Server()

@@ -12,3 +12,11 @@ def response_as_dataframe(response: List[Dict[str, Any]]):
     df = df.sort_values(by=DATE, ascending=True)
     df = df.drop(columns=['USER'])
     return df
+
+
+def validate_float_input(value: str) -> bool:
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
