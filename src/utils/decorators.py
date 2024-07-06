@@ -1,5 +1,6 @@
 import logging
 from functools import wraps
+from typing import Tuple
 
 import requests
 import streamlit as st
@@ -24,20 +25,20 @@ def on_http_error(func):
 def authentication(success_msg: str, fail_msg: str):
     def decorator(func):
         @wraps(func)
-        def wrapper(*args, **kwargs) -> bool:
+        def wrapper(*args, **kwargs) -> Tuple[bool, str]:
             try:
-                response = func(*args, **kwargs)
+                response, name = func(*args, **kwargs)
                 success = response
                 if success:
                     st.success(success_msg)
                 else:
                     st.error(fail_msg)
-                return success
+                return success, name
             except requests.exceptions.ConnectionError as e:
                 st.error(str(e))
-                return False
+                return False, ""
             except Exception as e:
                 logger.error(f"An unknown error occurred: {e}")
-                return False
+                return False, ""
         return wrapper
     return decorator

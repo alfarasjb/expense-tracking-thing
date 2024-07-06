@@ -1,6 +1,9 @@
 import datetime
+import logging
 from datetime import timedelta, datetime as dt
+from typing import List, Dict, Union, Any
 
+import pandas as pd
 import streamlit as st
 
 from src.app.plots import Plots
@@ -13,6 +16,8 @@ from src.definitions.constants import (
 from src.definitions.enums import ExpenseCategory
 from src.services.server import server
 from src.utils.utils import validate_float_input, response_as_dataframe
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -100,11 +105,12 @@ class Database:
         # TODO: Add validation if there's no data
         st.session_state.refresh_monthly_data = False
         st.session_state.monthly_data, start_date, end_date, summary = self._get_monthly_data()
-        if len(st.session_state.monthly_data) > 0:
-            st.session_state.plot = self.plots.plot_monthly_expenses_bar_chart(st.session_state.monthly_data,
-                                                                           start_date=start_date,                                                    end_date=end_date)
-        if st.session_state.summary == "":
-            st.session_state.summary = summary
+        if st.session_state.monthly_data is not None:
+            st.session_state.plot = self.plots.plot_monthly_expenses_bar_chart(
+                st.session_state.monthly_data,
+                start_date=start_date,
+                end_date=end_date)
+        st.session_state.summary = summary
 
     """
     Helpers
@@ -137,6 +143,17 @@ class Database:
         next_month = 1 if start_date.month == 12 else start_date.month + 1
         end_date = dt(start_date.year, next_month, 1)
         monthly_data, summary = self.server.get_monthly_data(start_date.strftime(date_fmt), end_date.strftime(date_fmt))
-        st.session_state.monthly_data = monthly_data
+        data_is_available = self._check_for_available_data(monthly_data, summary)
+        if not data_is_available:
+            logger.info(f"No data available for {start_date} to {end_date}")
+            return None, start_date, end_date, None
         df = response_as_dataframe(monthly_data)
         return df, start_date, end_date, summary
+
+    @staticmethod
+    def _check_for_available_data(monthly_data: Union[List[Dict[str, Any]], str], summary: str):
+        if isinstance(monthly_data, str):
+            return False
+        if summary == "":
+            return False
+        return True

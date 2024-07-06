@@ -24,7 +24,7 @@ class ExpenseTrackerApp:
         st.set_page_config(page_title="Expense Tracker", layout="centered", initial_sidebar_state='collapsed')
 
     def _home_screen(self):
-        st.title(f"Welcome, {st.session_state.user}!")
+        st.title(f"Welcome, {st.session_state.name}!")
         if st.button(c.ADD_EXPENSES_BUTTON):
             st.session_state.screen = c.EXPENSE_SCREEN
             st.rerun()
@@ -33,15 +33,19 @@ class ExpenseTrackerApp:
         self._dashboard()
 
     @staticmethod
-    def _dashboard():
-        if "summary" in st.session_state:
-            st.write(st.session_state.summary)
+    def _get_summary():
+        if "summary" in st.session_state and st.session_state.summary:
+            return st.session_state.summary
+        return "No data available for the currrent month."
+
+    def _dashboard(self):
+        st.write(self._get_summary())
         if "plot" in st.session_state:
             st.pyplot(st.session_state.plot)
-        if "monthly_data" in st.session_state:
+        if "monthly_data" in st.session_state and st.session_state.monthly_data is not None:
             st.dataframe(st.session_state.monthly_data, hide_index=True, use_container_width=True)
         else:
-            print("Dashboard is up to date")
+            logger.info("Dashboard is up to date.")
 
     @staticmethod
     def _initialize_session_state():
@@ -55,6 +59,8 @@ class ExpenseTrackerApp:
             st.session_state.user = ""
         if "summary" not in st.session_state:
             st.session_state.summary = ""
+        if "name" not in st.session_state:
+            st.session_state.name = ""
 
     def main(self):
         self._initialize_session_state()

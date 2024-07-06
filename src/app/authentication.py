@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Tuple
 
 import streamlit as st
 
@@ -13,12 +13,12 @@ class Authentication:
         self.server = server
 
     @authentication(success_msg=Messages.login_success_message(), fail_msg=Messages.login_failed_message())
-    def _login(self, username: str, password: str) -> bool:
+    def _login(self, username: str, password: str) -> Tuple[bool, str]:
         return self.server.login_user(username=username, password=password)
 
     @authentication(success_msg=Messages.register_success_message(), fail_msg=Messages.register_failed_message())
-    def _register(self, username: str, password: str) -> bool:
-        return self.server.register_user(username=username, password=password)
+    def _register(self, name: str, username: str, password: str) -> Tuple[bool, str]:
+        return self.server.register_user(name=name, username=username, password=password)
 
     """ 
     Screens
@@ -29,12 +29,12 @@ class Authentication:
         password = st.text_input("Password", type="password")
         if st.button(LOGIN_BUTTON):
             if st.session_state.screen == LOGIN_SCREEN:
-                st.session_state.logged_in = self._login(username=username, password=password)
+                st.session_state.logged_in, name = self._login(username=username, password=password)
                 if st.session_state.logged_in:
                     st.session_state.user = username
+                    st.session_state.name = name if name != "" else username
                     callback()
                     st.rerun()
-                st.error("Failed to login. Username or password may be incorrect.")
 
         st.markdown("Don't have an account? Sign up instead.")
         if st.button(REGISTER_BUTTON):
@@ -48,11 +48,12 @@ class Authentication:
         password = st.text_input("Password", type="password")
         if st.button(REGISTER_BUTTON):
             if st.session_state.screen == REGISTER_SCREEN:
-                st.session_state.logged_in = self._register(username=username, password=password)
+                st.session_state.logged_in, name = self._register(name=name, username=username, password=password)
                 if st.session_state.logged_in:
+                    st.session_state.user = username
+                    st.session_state.name = name if name != "" else username
                     callback()
                     st.rerun()
-                st.error("Failed to register")
 
         st.markdown("Already have an account? Sign in instead.")
         if st.button(LOGIN_BUTTON):
