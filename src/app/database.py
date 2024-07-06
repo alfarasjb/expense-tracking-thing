@@ -16,6 +16,7 @@ from src.definitions.constants import (
 from src.definitions.enums import ExpenseCategory
 from src.services.server import server
 from src.utils.utils import validate_float_input, response_as_dataframe
+from src.app.events import set_screen
 
 logger = logging.getLogger(__name__)
 
@@ -37,22 +38,16 @@ class Database:
             value=datetime.date.today(),
             min_value=datetime.date(2000, 1, 1),
             max_value=datetime.date.today())
-        self._on_press_store_button(
-            selected_option=selected_option,
-            expense_description=expense_description,
-            amount=amount,
-            selected_date=selected_date
-        )
-        self._on_press_exit_button()
+        store_bt, exit_bt = st.columns(2)
+        store_bt.button(STORE_BUTTON, use_container_width=True, on_click=self._on_press_store_button, args=[selected_option, expense_description, amount, selected_date])
+        exit_bt.button(EXIT_BUTTON, use_container_width=True, on_click=self._on_press_exit_button)
 
     """ 
     Events
     """
     def _on_press_exit_button(self):
-        if st.button(EXIT_BUTTON, use_container_width=True):
-            st.session_state.screen = HOME_SCREEN
-            self.on_refresh_monthly_data()
-            st.rerun()
+        set_screen(HOME_SCREEN)
+        self.on_refresh_monthly_data()
 
     def _on_press_expense_history_button(self):
         if st.button(SHOW_EXPENSE_HISTORY_BUTTON, use_container_width=True):
@@ -73,33 +68,30 @@ class Database:
         valid_fields = (expense_description != "") or (amount != "")
         valid_float_input = validate_float_input(amount)
 
-        if st.button(STORE_BUTTON, use_container_width=True):
-            valid_homepage_inputs = self._valid_home_page_inputs(
-                valid_option=valid_option,
-                valid_fields=valid_fields,
-                valid_float_input=valid_float_input)
-            try:
-                if valid_homepage_inputs:
-                    date = (datetime.datetime.combine(selected_date, datetime.time.min) + timedelta(
-                        days=1)).timestamp() * 1000  # Converts to datetime then gets timestamp
-                    payload = {
-                        "username": st.session_state.user,
-                        "category": selected_option,
-                        "description": expense_description,
-                        "amount": amount,
-                        "date": date
-                    }
-                    code = self.server.store_data_to_db(payload=payload)
-                    st.session_state.refresh_dashboard = True
-                    st.session_state.screen = HOME_SCREEN
-                    if code == 200:
-                        st.success("Expenses stored to database.")
-                        self.on_refresh_monthly_data()
-                        st.rerun()
-                    else:
-                        st.error("Something went wrong. Failed to log expenses into database.")
-            except:
-                pass
+        valid_homepage_inputs = self._valid_home_page_inputs(
+            valid_option=valid_option,
+            valid_fields=valid_fields,
+            valid_float_input=valid_float_input)
+        try:
+            if valid_homepage_inputs:
+                date = (datetime.datetime.combine(selected_date, datetime.time.min) + timedelta(
+                    days=1)).timestamp() * 1000  # Converts to datetime then gets timestamp
+                payload = {
+                    "username": st.session_state.user,
+                    "category": selected_option,
+                    "description": expense_description,
+                    "amount": amount,
+                    "date": date
+                }
+                code = self.server.store_data_to_db(payload=payload)
+                st.session_state.refresh_dashboard = True
+                if code == 200:
+                    st.success("Expenses stored to database.")
+                    self.on_refresh_monthly_data()
+                else:
+                    st.error("Something went wrong. Failed to log expenses into database.")
+        except:
+            pass
 
     def on_refresh_monthly_data(self):
         # TODO: Add validation if there's no data

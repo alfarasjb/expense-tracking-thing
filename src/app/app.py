@@ -7,6 +7,7 @@ from src.app.chat import Chat
 from src.app.database import Database
 from src.definitions import constants as c
 from src.services.server import server
+from src.app.events import set_screen
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +24,20 @@ class ExpenseTrackerApp:
     def _initialize_app():
         st.set_page_config(page_title="Expense Tracker", layout="centered", initial_sidebar_state='collapsed')
 
+    @staticmethod
+    def _on_click_sign_out_button():
+        set_screen(c.ENTRY_SCREEN)
+        st.session_state.user = ""
+        st.session_state.summary = ""
+        st.session_state.name = ""
+        st.session_state.logged_in = False
+
     def _home_screen(self):
-        st.title(f"Welcome, {st.session_state.name}!")
-        if st.button(c.ADD_EXPENSES_BUTTON):
-            st.session_state.screen = c.EXPENSE_SCREEN
-            st.rerun()
+        st.header(f"Welcome, {st.session_state.name}!")
+        profile, sign_out, _ = st.columns([1, 1, 3])
+        profile.button("View Profile", use_container_width=True)
+        sign_out.button("Sign out", use_container_width=True, on_click=self._on_click_sign_out_button)
+        # st.button(c.ADD_EXPENSES_BUTTON, on_click=set_screen, args=[c.EXPENSE_SCREEN])
         with st.sidebar:
             self.chat.chat_box()
         self._dashboard()
@@ -42,6 +52,7 @@ class ExpenseTrackerApp:
         st.write(self._get_summary())
         if "plot" in st.session_state:
             st.pyplot(st.session_state.plot)
+        st.button(c.ADD_EXPENSES_BUTTON, on_click=set_screen, args=[c.EXPENSE_SCREEN])
         if "monthly_data" in st.session_state and st.session_state.monthly_data is not None:
             st.dataframe(st.session_state.monthly_data, hide_index=True, use_container_width=True)
         else:
@@ -52,7 +63,7 @@ class ExpenseTrackerApp:
         if "logged_in" not in st.session_state:
             st.session_state.logged_in = False
         if "screen" not in st.session_state:
-            st.session_state.screen = c.ENTRY_SCREEN
+            set_screen(c.ENTRY_SCREEN)
         if "refresh_dashboard" not in st.session_state:
             st.session_state.refresh_dashboard = True
         if "user" not in st.session_state:

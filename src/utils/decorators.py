@@ -30,7 +30,8 @@ def authentication(success_msg: str, fail_msg: str):
                 response, name = func(*args, **kwargs)
                 success = response
                 if success:
-                    st.success(success_msg)
+                    logger.info(success_msg)
+                    # st.success(success_msg)
                 else:
                     st.error(fail_msg)
                 return success, name
