@@ -16,7 +16,7 @@ REGISTER_SCREEN = 'register'
 EXPENSE_SCREEN = 'expense_form'
 HOME_SCREEN = 'home'
 ENTRY_SCREEN = 'entry'
-
+HISTORY_SCREEN = 'expenses_history'
 """ 
 Buttons
 """

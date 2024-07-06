@@ -14,7 +14,7 @@ class Chat:
         # Initialize Chat History
         if "messages" not in st.session_state:
             st.session_state.messages = [
-                dict(role="assistant", content=f"Hello {st.session_state.user}! How can I help you today?")]
+                dict(role="assistant", content=f"Hello {st.session_state.name}! How can I help you today?")]
 
         # Display chat messages from history on app rerun
         for message in st.session_state.messages:

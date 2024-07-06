@@ -42,12 +42,16 @@ class Database:
         store_bt.button(STORE_BUTTON, use_container_width=True, on_click=self._on_press_store_button, args=[selected_option, expense_description, amount, selected_date])
         exit_bt.button(EXIT_BUTTON, use_container_width=True, on_click=self._on_press_exit_button)
 
+    def expenses_history_screen(self):
+        st.header("Expenses History")
+        st.button("Back to dashboard", on_click=set_screen, args=[HOME_SCREEN])
+
     """ 
     Events
     """
-    def _on_press_exit_button(self):
+    @staticmethod
+    def _on_press_exit_button():
         set_screen(HOME_SCREEN)
-        self.on_refresh_monthly_data()
 
     def _on_press_expense_history_button(self):
         if st.button(SHOW_EXPENSE_HISTORY_BUTTON, use_container_width=True):
@@ -86,8 +90,8 @@ class Database:
                 code = self.server.store_data_to_db(payload=payload)
                 st.session_state.refresh_dashboard = True
                 if code == 200:
-                    st.success("Expenses stored to database.")
                     self.on_refresh_monthly_data()
+                    st.success("Expenses stored to database.")
                 else:
                     st.error("Something went wrong. Failed to log expenses into database.")
         except:
@@ -102,6 +106,8 @@ class Database:
                 st.session_state.monthly_data,
                 start_date=start_date,
                 end_date=end_date)
+            # Convert datetime to date here.
+            st.session_state.monthly_data["DATE"] = st.session_state.monthly_data["DATE"].dt.date
         st.session_state.summary = summary
 
     """

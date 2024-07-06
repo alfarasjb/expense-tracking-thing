@@ -52,7 +52,11 @@ class ExpenseTrackerApp:
         st.write(self._get_summary())
         if "plot" in st.session_state:
             st.pyplot(st.session_state.plot)
-        st.button(c.ADD_EXPENSES_BUTTON, on_click=set_screen, args=[c.EXPENSE_SCREEN])
+        st.header("Expenses")
+        add_expenses, view_all_expenses, _ = st.columns([2, 2, 4])
+        add_expenses.button(c.ADD_EXPENSES_BUTTON, use_container_width=True, on_click=set_screen, args=[c.EXPENSE_SCREEN])
+        view_all_expenses.button("View All Expenses", use_container_width=True, on_click=set_screen, args=[c.HISTORY_SCREEN])
+
         if "monthly_data" in st.session_state and st.session_state.monthly_data is not None:
             st.dataframe(st.session_state.monthly_data, hide_index=True, use_container_width=True)
         else:
@@ -85,5 +89,7 @@ class ExpenseTrackerApp:
         else:
             if st.session_state.screen == c.EXPENSE_SCREEN:
                 self.db.add_expenses_screen()
+            elif st.session_state.screen == c.HISTORY_SCREEN:
+                self.db.expenses_history_screen()
             else:
                 self._home_screen()
