@@ -12,7 +12,8 @@ from src.definitions.constants import (
     HOME_SCREEN,
     EXIT_BUTTON,
     SHOW_EXPENSE_HISTORY_BUTTON,
-    CLEAR_DATABASE_CONTENTS)
+    CLEAR_DATABASE_CONTENTS,
+    AMOUNT)
 from src.definitions.enums import ExpenseCategory
 from src.services.server import server
 from src.utils.utils import validate_float_input, response_as_dataframe
@@ -108,6 +109,7 @@ class Database:
                 end_date=end_date)
             # Convert datetime to date here.
             st.session_state.monthly_data["DATE"] = st.session_state.monthly_data["DATE"].dt.date
+            st.session_state.month_total = st.session_state.monthly_data[AMOUNT].sum()
         st.session_state.summary = summary
 
     """

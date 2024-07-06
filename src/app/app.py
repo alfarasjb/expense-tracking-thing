@@ -31,9 +31,10 @@ class ExpenseTrackerApp:
         st.session_state.summary = ""
         st.session_state.name = ""
         st.session_state.logged_in = False
+        st.session_state.month_total = 0
 
     def _home_screen(self):
-        st.header(f"Welcome, {st.session_state.name}!")
+        st.title(f"Welcome, {st.session_state.name}!")
         profile, sign_out, _ = st.columns([1, 1, 3])
         profile.button("View Profile", use_container_width=True)
         sign_out.button("Sign out", use_container_width=True, on_click=self._on_click_sign_out_button)
@@ -46,9 +47,10 @@ class ExpenseTrackerApp:
     def _get_summary():
         if "summary" in st.session_state and st.session_state.summary:
             return st.session_state.summary
-        return "No data available for the currrent month."
+        return "No data available for the current month."
 
     def _dashboard(self):
+        st.header(f"You spent Php {st.session_state.month_total} this month.")
         st.write(self._get_summary())
         if "plot" in st.session_state:
             st.pyplot(st.session_state.plot)
@@ -56,7 +58,6 @@ class ExpenseTrackerApp:
         add_expenses, view_all_expenses, _ = st.columns([2, 2, 4])
         add_expenses.button(c.ADD_EXPENSES_BUTTON, use_container_width=True, on_click=set_screen, args=[c.EXPENSE_SCREEN])
         view_all_expenses.button("View All Expenses", use_container_width=True, on_click=set_screen, args=[c.HISTORY_SCREEN])
-
         if "monthly_data" in st.session_state and st.session_state.monthly_data is not None:
             st.dataframe(st.session_state.monthly_data, hide_index=True, use_container_width=True)
         else:
@@ -76,6 +77,8 @@ class ExpenseTrackerApp:
             st.session_state.summary = ""
         if "name" not in st.session_state:
             st.session_state.name = ""
+        if "month_total" not in st.session_state:
+            st.session_state.month_total = 0
 
     def main(self):
         self._initialize_session_state()

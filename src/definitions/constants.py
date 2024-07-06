@@ -7,6 +7,7 @@ SERVER_BASE_URL = "SERVER_BASE_URL"
 Dataframe Columns
 """
 DATE = "DATE"
+AMOUNT = "AMOUNT"
 
 """ 
 Screens
@@ -17,6 +18,7 @@ EXPENSE_SCREEN = 'expense_form'
 HOME_SCREEN = 'home'
 ENTRY_SCREEN = 'entry'
 HISTORY_SCREEN = 'expenses_history'
+
 """ 
 Buttons
 """
